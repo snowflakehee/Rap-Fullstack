@@ -50,6 +50,19 @@ def search_books(q: Optional[str] = Query("")):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+@app.get("/books/suggestions")
+def get_suggestions(q: Optional[str] = Query("")):
+    suggestions = set()
+    q_lower = q.lower()
+    for book in books_data:
+        title = book.get("title", "").lower()
+        if q_lower in title:
+            suggestions.add(book.get("title"))
+        if len(suggestions) >= 10:
+            break
+    return {"suggestions": list(suggestions)}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

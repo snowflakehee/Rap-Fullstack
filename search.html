@@ -11,35 +11,55 @@
     <h1>Book Search Engine</h1>
   </div>
 
-  <div class="search-form">
+  <div class="search-form" style="position: relative;">
     <input
       type="text"
       id="query"
-      placeholder='Search e.g. title:flex category:Java pageCount:400>='
+      placeholder='Enter a book title, author, or ISBN'
       style="width: 80%; padding: 10px;"
     />
     <button onclick="searchBooks()">Search</button>
+    <div class="autocomplete-box" id="autocomplete-box"></div>
   </div>
 
   <div id="results" class="results"></div>
 
-  <div id="pagination" style="margin-top: 20px;"></div>
-
   <script>
-    let currentPage = 1;
-    const limit = 5;
+    const queryInput = document.getElementById("query");
+    const suggestionBox = document.getElementById("autocomplete-box");
 
-    function searchBooks(page = 1) {
+    queryInput.addEventListener("input", () => {
+      const q = queryInput.value;
+      if (q.length === 0) {
+        suggestionBox.innerHTML = "";
+        return;
+      }
+
+      fetch(`http://localhost:8000/books/suggestions?q=${encodeURIComponent(q)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          suggestionBox.innerHTML = "";
+          data.suggestions.forEach((title) => {
+            const div = document.createElement("div");
+            div.className = "suggestion";
+            div.textContent = title;
+            div.onclick = () => {
+              queryInput.value = title;
+              suggestionBox.innerHTML = "";
+              searchBooks(); // auto-search
+            };
+            suggestionBox.appendChild(div);
+          });
+        });
+    });
+
+    function searchBooks() {
       const q = document.getElementById("query").value;
-      currentPage = page;
-
-      fetch(`http://localhost:8000/books/search?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`)
+      fetch(`http://localhost:8000/books/search?q=${encodeURIComponent(q)}`)
         .then((response) => response.json())
         .then((data) => {
           const resultsDiv = document.getElementById("results");
-          const paginationDiv = document.getElementById("pagination");
           resultsDiv.innerHTML = "";
-          paginationDiv.innerHTML = "";
 
           if (data.results.length === 0) {
             resultsDiv.innerHTML = "<p>No books found.</p>";
@@ -60,16 +80,6 @@
             `;
             resultsDiv.appendChild(bookCard);
           });
-
-          if (data.totalPages > 1) {
-            if (currentPage > 1) {
-              paginationDiv.innerHTML += `<button onclick="searchBooks(${currentPage - 1})">Prev</button>`;
-            }
-            paginationDiv.innerHTML += ` Page ${currentPage} of ${data.totalPages} `;
-            if (currentPage < data.totalPages) {
-              paginationDiv.innerHTML += `<button onclick="searchBooks(${currentPage + 1})">Next</button>`;
-            }
-          }
         })
         .catch((error) => {
           console.error("Error:", error);
