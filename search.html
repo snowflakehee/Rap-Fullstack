@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book Search Engine</title>
+  <link rel="stylesheet" href="search.css" />
+</head>
+<body>
+  <div class="navbar">
+    <h1>Book Search Engine</h1>
+  </div>
+
+  <div class="search-form">
+    <input
+      type="text"
+      id="query"
+      placeholder='Search e.g. title:flex category:Java pageCount:400>='
+      style="width: 80%; padding: 10px;"
+    />
+    <button onclick="searchBooks()">Search</button>
+  </div>
+
+  <div id="results" class="results"></div>
+
+  <div id="pagination" style="margin-top: 20px;"></div>
+
+  <script>
+    let currentPage = 1;
+    const limit = 5;
+
+    function searchBooks(page = 1) {
+      const q = document.getElementById("query").value;
+      currentPage = page;
+
+      fetch(`http://localhost:8000/books/search?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`)
+        .then((response) => response.json())
+        .then((data) => {
+          const resultsDiv = document.getElementById("results");
+          const paginationDiv = document.getElementById("pagination");
+          resultsDiv.innerHTML = "";
+          paginationDiv.innerHTML = "";
+
+          if (data.results.length === 0) {
+            resultsDiv.innerHTML = "<p>No books found.</p>";
+            return;
+          }
+
+          data.results.forEach((book) => {
+            const bookCard = document.createElement("div");
+            bookCard.className = "book-card";
+            bookCard.style = "border: 1px solid #ccc; padding: 10px; margin: 10px;";
+            bookCard.innerHTML = `
+              <img src="${book.thumbnailUrl || ''}" alt="thumbnail" width="100"/>
+              <h3>${book.title}</h3>
+              <p><strong>Authors:</strong> ${book.authors?.join(", ")}</p>
+              <p><strong>Category:</strong> ${book.categories?.join(", ")}</p>
+              <p><strong>Pages:</strong> ${book.pageCount}</p>
+              <p><strong>ISBN:</strong> ${book.isbn}</p>
+            `;
+            resultsDiv.appendChild(bookCard);
+          });
+
+          if (data.totalPages > 1) {
+            if (currentPage > 1) {
+              paginationDiv.innerHTML += `<button onclick="searchBooks(${currentPage - 1})">Prev</button>`;
+            }
+            paginationDiv.innerHTML += ` Page ${currentPage} of ${data.totalPages} `;
+            if (currentPage < data.totalPages) {
+              paginationDiv.innerHTML += `<button onclick="searchBooks(${currentPage + 1})">Next</button>`;
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          document.getElementById("results").innerHTML = "<p>Error fetching books.</p>";
+        });
+    }
+  </script>
+</body>
+</html>
